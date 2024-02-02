@@ -44,6 +44,13 @@ If you encounter issues during installation:
 
 For additional help, please refer to the community forums or the mod's documentation.
 
+
+## Compiling
+To Compile your own copy of DDMI, you can run the following commands
+```pip install nuitka```
+```nuitka --mingw64 --onefile --enable-plugin=tk-inter --windows-disable-console "DDMI.py"```
+
+
 ## Contributing
 
 Contributions to DDMI are welcome! If you have suggestions for improvements or bug fixes, please open an issue or submit a pull request.
