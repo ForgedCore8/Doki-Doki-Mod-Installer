@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DDLC Mod Installer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Custom Message Box Container -->
+    <div id="messageBox" class="message-box hidden">
+        <div class="message-box-content">
+            <div id="messageBoxTitle" class="message-box-title">Message Title</div>
+            <p id="messageBoxText">Your message here.</p>
+            <button id="closeboxbutton" onclick="closeMessageBox()">OK</button>
+        </div>
+    </div>
+
+
+    <div id="app">
+        <!-- Mod Zip Location -->
+        <div class="input-group">
+            <label for="zipEntry">Zip File:</label>
+            <input type="text" id="zipEntry">
+            <button id="zipBrowse" onclick="browsePath('zipEntry', false)">Browse</button>
+        </div>
+
+        <!-- Game Path -->
+        <div class="input-group">
+            <label for="gamePathEntry">Game Directory:</label>
+            <input type="text" id="gamePathEntry">
+            <button id="gamePathBrowse" onclick="browsePath('gamePathEntry', false)">Browse</button>
+            <button id="autoButton" onclick="autoToggle()">Auto</button>
+        </div>
+        <div class="input-grop">
+            <label class="container">Install Mod to Separate Directory
+                <input id="newDirCheckbox" type="checkbox" onchange="checkChanged()">
+                <span class="checkmark"></span>
+            </label></div>
+
+        <!-- Mod Path (Shown based on checkbox) -->
+        <div class="input-group" id="modPathGroup" style="display: none;">
+            <label for="modPathEntry">Mod Path:</label>
+            <input type="text" id="modPathEntry">
+            <button onclick="browsePath('modPathEntry', true)">Browse</button>
+        </div>
+
+        <button id="processButton" onclick="onButtonClick()">Install Mod</button>
+        <button id="deleteButton" onclick="deleteDDLC()">Delete DDLC</button>
+
+        <!-- Console Output -->
+        <div class="console">
+            <label>Console Output:</label>
+            <div id="consoleOutput" class="console-output"></div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+        </div>
+
+        <div class="reminder">
+            Remember to install on a fresh copy of Doki Doki Literature Club!
+        </div>
+    </div>
+
+    <script src="eel.js"></script> <!-- Link to Eel's JavaScript functions -->
+    <script src="script.js"></script>
+</body>
+
+</html>

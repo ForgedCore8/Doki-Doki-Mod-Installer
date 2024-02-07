@@ -1,14 +1,17 @@
 """DDLC Mod Installer"""
+# pylint: disable=no-member
+# pyright: reportGeneralTypeIssues=false
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox
 import os
 import zipfile
 import shutil
 import winreg
 import subprocess
-import threading
+import eel
 
+eel.init('web')
 
 LEFT_PADDING = 10
 def calculate_directory_size(path):
@@ -31,33 +34,30 @@ def delete_directory_with_progress(path, total_size, deleted_size=None):
             file_size = os.path.getsize(file_path)
             os.remove(file_path)
             deleted_size[0] += file_size
-            progress_bar['value'] = (deleted_size[0] / total_size) * 100
-            app.update_idletasks()
+            eel.updateProgressBar((deleted_size[0] / total_size) * 100)
 
         for name in dirs:
             os.rmdir(os.path.join(root, name))
 
     os.rmdir(path)  # Finally, remove the root directory itself
-    progress_bar['value'] = 100  # Ensure it reaches 100% at the end
-    app.update_idletasks()
+    eel.updateProgressBar(100)  # Ensure it reaches 100% at the end
 
-def delete_ddlc():
+def delete_ddlc(game_path):
     "Delete the DDLC Folder for a Clean Install"
-    game_path = game_path_entry.get().strip()
 
     # Check if the path is empty
     if not game_path:
-        messagebox.showerror("Error", "Game directory is empty. Please specify a valid path.")
+        eel.showMessage("Error", "Game directory is empty. Please specify a valid path.")
         return
 
     # Safeguard checks to ensure the directory is indeed for DDLC
     valid_names = ["Doki Doki Literature Club"]
     if not any(name in game_path for name in valid_names):
-        messagebox.showerror(
+        eel.showMessage(
             "Error", 
             "The specified directory does not appear to be a valid DDLC installation."
             )
-        append_to_console("Error: Attempted to delete a non-DDLC directory.")
+        eel.appendToConsole("Error: Attempted to delete a non-DDLC directory.")
         return
 
     # Check for existence of expected game files as an extra precaution
@@ -66,10 +66,10 @@ def delete_ddlc():
         os.path.exists(
             os.path.join(game_path, expected_file)
         ) for expected_file in expected_files):
-        messagebox.showerror(
+        eel.showMessage(
             "Error",
             "The specified directory does not contain expected DDLC files.")
-        append_to_console("Error: The specified directory lacks expected DDLC files.")
+        eel.appendToConsole("Error: The specified directory lacks expected DDLC files.")
         return
 
     # Confirmation dialog
@@ -79,30 +79,31 @@ def delete_ddlc():
     if confirm:
         try:
             total_size = calculate_directory_size(game_path)
-            show_progressbar()  # Initialize progress bar
+            eel.showProgressBar()  # Initialize progress bar
             delete_directory_with_progress(game_path, total_size)
-            append_to_console(f"DDLC has been uninstalled successfully from: {game_path}")
+            eel.appendToConsole(f"DDLC has been uninstalled successfully from: {game_path}")
             messagebox.showinfo("Uninstall Complete", "DDLC has been successfully uninstalled.")
             game_path_entry.delete(0, tk.END)  # Clear the path entry after deletion
         except Exception as e:
-            append_to_console(f"Error during uninstallation: {e}")
-            messagebox.showerror("Error", f"Failed to uninstall DDLC. {e}")
+            eel.appendToConsole(f"Error during uninstallation: {e}")
+            eel.showMessage("Error", f"Failed to uninstall DDLC. {e}")
     else:
-        append_to_console("Uninstallation cancelled.")
+        eel.appendToConsole("Uninstallation cancelled.")
 
 
 def get_steam_path():
-    """Find Steam on the System"""
+    """Find Steam on the System
+    returns: Steam Path"""
     try:
         key_path = r"SOFTWARE\Valve\Steam"
         if os.environ["PROCESSOR_ARCHITECTURE"].endswith('64'):
             key_path = r"SOFTWARE\Wow6432Node\Valve\Steam"
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path, 0, winreg.KEY_READ)
         value, _ = winreg.QueryValueEx(key, "InstallPath")
-        append_to_console(f"Steam Path Value: {value}")
+        eel.appendToConsole(f"Steam Path Value: {value}")
         return value
     except Exception as e:
-        append_to_console(f"Error accessing registry: {e}")
+        eel.appendToConsole(f"Error accessing registry: {e}")
         return None
 
 def parse_vdf_for_paths(vdf_path, game_ids=None):
@@ -129,7 +130,7 @@ def parse_vdf_for_paths(vdf_path, game_ids=None):
                     # Found a game ID, add the current path if it's not already added
                     if current_path and current_path not in paths and os.path.exists(current_path):
                         paths.append(current_path)
-                        append_to_console(f"Found Steam library with game: {current_path}")
+                        eel.appendToConsole(f"Found Steam library with game: {current_path}")
                         # Reset for next library
                         current_path = ""
                         in_apps_block = False
@@ -139,8 +140,8 @@ def parse_vdf_for_paths(vdf_path, game_ids=None):
                     current_path = ""  # Reset current path after exiting an apps block
 
     except Exception as e:
-        append_to_console(f"Error parsing VDF: {e}")
-    append_to_console(f"VDF Paths: {paths}")
+        eel.appendToConsole(f"Error parsing VDF: {e}")
+    eel.appendToConsole(f"VDF Paths: {paths}")
     return paths
 
 
@@ -162,7 +163,7 @@ def find_game_directory():
         for path in library_paths:
             for game_folder in ["Doki Doki Literature Club"]:
                 game_path = os.path.join(path, "steamapps", "common", game_folder)
-                append_to_console(f"Game Path: {game_path}")
+                eel.appendToConsole(f"Game Path: {game_path}")
                 if os.path.exists(game_path):
                     return game_path
     # Return an informative string or empty if not found
@@ -185,37 +186,39 @@ def merge_directories(src, dst, processed_size, destination_path):
             dst_file_path = os.path.join(dst_path, file)
             file_size = os.path.getsize(src_file_path)
             if os.path.exists(dst_file_path):
-                append_to_console(f"Overwriting file: {dst_file_path}")
+                eel.appendToConsole(f"Overwriting file: {dst_file_path}")
             else:
-                append_to_console(f"Copying file: {dst_file_path}")
+                eel.appendToConsole(f"Copying file: {dst_file_path}")
             shutil.copy2(src_file_path, dst_file_path)
             processed_size[0] += file_size  # Update processed size
-            progress_bar['value'] = processed_size[0]  # Update progress bar
-            app.update_idletasks() # Refresh GUI
+            eel.updateProgressBar(processed_size[0])
 
 
 
-def overwrite_file(src, dst, processed_size, destination_path):
+def overwrite_file(src, dst, processed_size, destination_path, total_size):
     """Overwrite the file at dst with src, within the destination path."""
     dst = os.path.join(destination_path, dst)  # Adjust destination path
     file_size = os.path.getsize(src)
     if os.path.exists(dst):
         os.remove(dst)
-        append_to_console(f"Removed existing file: {dst}")
+        eel.appendToConsole(f"Removed existing file: {dst}")
     shutil.copy2(src, dst)
-    append_to_console(f"Copied {src} to {dst}")
+    eel.appendToConsole(f"Copied {src} to {dst}")
     processed_size[0] += file_size
-    progress_bar['value'] = (processed_size[0] / progress_bar['maximum']) * 100
-    app.update_idletasks()  # Update the GUI to reflect progress change
+    eel.updateProgressBar((processed_size[0] / total_size) * 100)
 
-
+@eel.expose
 def process_files(zip_path, game_path, separate_mod_path=None):
     """Process files and directories with explicit handling for overwriting."""
     open_dir = False
-    append_to_console(f"Processing files from: {zip_path} to {game_path}")
+
+    print(zip_path)
+    print(game_path)
+    print(separate_mod_path)
+    eel.appendToConsole(f"Processing files from: {zip_path} to {game_path}")
 
     if not zip_path.lower().endswith('.zip'):
-        append_to_console("Error: The provided path does not point to a zip file.")
+        eel.appendToConsole("Error: The provided path does not point to a zip file.")
         return
 
     destination_path = separate_mod_path if separate_mod_path else game_path
@@ -230,16 +233,13 @@ def process_files(zip_path, game_path, separate_mod_path=None):
         # Initialize progress tracking
         processed_size = [0]
 
-        # Adjust progress bar initialization
-        progress_bar['maximum'] = total_size
-
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             extract_path = os.path.splitext(zip_path)[0]
             try:
                 zip_ref.extractall(extract_path)
-                append_to_console(f"Extracted zip to: {extract_path}")
+                eel.appendToConsole(f"Extracted zip to: {extract_path}")
             except PermissionError:
-                append_to_console("Warning: Permission denied during extraction.")
+                eel.appendToConsole("Warning: Permission denied during extraction.")
                 return
         if separate_mod_path is not None:
             copy_game_files(
@@ -251,23 +251,23 @@ def process_files(zip_path, game_path, separate_mod_path=None):
             extract_path,
             destination_path,
             processed_size,
+            total_size,
             destination_path
             )
 
     except Exception as e:
-        append_to_console(f"Error during processing: {e}")
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        eel.appendToConsole(f"Error during processing: {e}")
+        eel.showMessage("Error", f"An error occurred: {e}")
 
-    progress_bar['value'] = progress_bar['maximum']  # Ensure progress bar reaches 100% at the end
-    enable_ui_elements()
+    eel.updateProgressBar(100)  # Ensure progress bar reaches 100% at the end
+    eel.enableUIElements()
     messagebox.showinfo("Process Completed", "All files have been processed successfully.")
     if open_dir:
         destination_path_abs = os.path.abspath(destination_path)
         if os.path.exists(destination_path):  # Make sure the path exists before trying to open it
             subprocess.run(['explorer', destination_path_abs], check=True)
         else:
-            messagebox.showerror("Error", "The specified path does not exist.")
-    app.config(cursor="")
+            eel.showMessage("Error", "The specified path does not exist.")
 
 
 def copy_game_files(game_path, destination_path, processed_size, total_size):
@@ -284,21 +284,19 @@ def copy_game_files(game_path, destination_path, processed_size, total_size):
                     shutil.copy2(file_src_path, file_dst_path)
                     file_size = os.path.getsize(file_src_path)
                     processed_size[0] += file_size
-                    progress_bar['value'] = (processed_size[0] / total_size) * 100
-                    app.update_idletasks()
+                    eel.updateProgressBar((processed_size[0] / total_size) * 100)
         else:
             if not os.path.exists(os.path.dirname(dst_path)):
                 os.makedirs(os.path.dirname(dst_path), exist_ok=True)
             shutil.copy2(src_path, dst_path)
             file_size = os.path.getsize(src_path)
             processed_size[0] += file_size
-            progress_bar['value'] = (processed_size[0] / total_size) * 100
-            app.update_idletasks()
-    append_to_console(f"Copied game files to: {destination_path}")
+            eel.updateProgressBar((processed_size[0] / total_size) * 100)
+    eel.appendToConsole(f"Copied game files to: {destination_path}")
 
 
 
-def process_extracted_files(extract_path, game_path, processed_size, destination_path=None):
+def process_extracted_files(extract_path, game_path, processed_size, total_size, destination_path=None):
     """Process Game files after zip extraction."""
     open_dir = False
     target_files = ['audio.rpa', 'fonts.rpa', 'images.rpa', 'scripts.rpa']
@@ -319,7 +317,7 @@ def process_extracted_files(extract_path, game_path, processed_size, destination
             base_dir = root
             break
     else:
-        append_to_console("None of the target directories or files found in the extracted path.")
+        eel.appendToConsole("None of the target directories or files found in the extracted path.")
         return open_dir
 
     # Process files and directories from the found base directory
@@ -331,22 +329,22 @@ def process_extracted_files(extract_path, game_path, processed_size, destination
             if any(name.lower().endswith(ext) for ext in executable_extensions):
                 # Executables go directly to destination_path
                 dst_path = name
-                append_to_console(f"Moving executable/script: {name}")
-                overwrite_file(src_path, dst_path, processed_size, destination_path)
+                eel.appendToConsole(f"Moving executable/script: {name}")
+                overwrite_file(src_path, dst_path, processed_size, destination_path, total_size)
                 if name.lower().endswith('.exe'):
                     open_dir = True
             elif name in target_files:
                 # Target files go to 'game' directory inside destination_path
                 dst_path = os.path.join('game', name)
-                append_to_console(f"Moving target file: {name} to {dst_path}")
-                overwrite_file(src_path, dst_path, processed_size, destination_path)
+                eel.appendToConsole(f"Moving target file: {name} to {dst_path}")
+                overwrite_file(src_path, dst_path, processed_size, destination_path, total_size)
 
         # Directories processing
         for name in dirs:
             src_path = os.path.join(root, name)
             if name in target_dirs or name.endswith('.app'):
                 # Target directories are copied to the destination_path
-                append_to_console(f"Copying directory: {name}")
+                eel.appendToConsole(f"Copying directory: {name}")
                 merge_directories(src_path, name, processed_size, destination_path)
 
         # Modify dirs list to exclude the target directories since they are already processed
@@ -354,119 +352,30 @@ def process_extracted_files(extract_path, game_path, processed_size, destination
 
     return open_dir
 
-
-def on_button_click():
-    """When the process button is clicked"""
-    try:
-        app.config(cursor="watch")  # Set cursor to 'watch' indicating a process is running
-        zip_path = zip_entry.get().strip()
-        game_path = game_path_entry.get().strip()
-        separate_mod_path = mod_path_entry.get().strip() if newdir_var.get() == 'True' else None
-
-        if not zip_path or not game_path:
-            messagebox.showerror(
-                "Error",
-                "Please specify both the ZIP file and the game directory.")
-            return
-
-        if newdir_var.get() == 'True' and not separate_mod_path:
-            messagebox.showerror("Error", "Please specify the mod directory.")
-            return
-
-        show_progressbar()
-        app.update_idletasks()  # Update UI immediately to reflect cursor change
-        disable_ui_elements()
-        install_thread = threading.Thread(
-            target=process_files, args=(zip_path, game_path, separate_mod_path)
-        )
-        app.after(100, install_thread.start)
-    except Exception as e:
-        append_to_console(f"Error: {e}")
-    finally:
-        app.config(cursor="")  # Revert cursor to default after operation
-
-
-
-
-
 # ======================
 #      UI Functions
 # ======================
 
-def check_changed(variable, entry):
-    """When the Checkbox is changed, show new UI Items.
-    (variable): the variable used, accepts 'True' and 'False'
-    (entry): The entry that will be read from"""
-    if variable == 'True':
-        mod_path_label.grid(row=3, column=0, pady=(LEFT_PADDING, 0))
-        mod_path_entry.grid(row=3, column=1, pady=(LEFT_PADDING, 0))
-        mod_path_browse.grid(row=3, column=2, pady=(LEFT_PADDING, 0))
-    if variable == 'False':
-        entry.delete(0, tk.END)
-        mod_path_label.grid_forget()
-        mod_path_entry.grid_forget()
-        mod_path_browse.grid_forget()
-
-def disable_ui_elements():
-    """Disable all UI"""
-    zip_browse.config(state="disabled")
-    game_path_browse.config(state="disabled")
-    auto_button.config(state="disabled")
-    process_button.config(state="disabled")
-    delete_button.config(state="disabled")
-
-def enable_ui_elements():
-    """Enable all UI"""
-    zip_browse.config(state="normal")
-    game_path_browse.config(state="normal")
-    auto_button.config(state="normal")
-    process_button.config(state="normal")
-    delete_button.config(state="normal")
-
-def show_progressbar():
-    """Display the progressbar"""
-    progress_bar.grid_forget()
-    progress_bar.config(mode='determinate', maximum=100, value=0)
-    progress_bar.grid(
-        row=7,
-        column=0,
-        columnspan=4,
-        sticky=tk.EW,
-        padx=(LEFT_PADDING, 0),
-        pady=(LEFT_PADDING, 0)
-        )
-
-def append_to_console(message):
-    """Append a message to the console and prevent user input."""
-    console.config(state=tk.NORMAL)  # Temporarily enable the widget for editing
-    console.insert(tk.END, str(message) + "\n")
-    console.see(tk.END)  # Scroll to the end
-    console.config(state=tk.DISABLED)  # Disable the widget to prevent user input
-
-def browse_path(entry, is_folder=False):
+@eel.expose
+def browse_path(is_folder):
     """Open a dialog to update the entry with the selected path,
     either file or folder, and log to console."""
+    root = tk.Tk()
+    root.withdraw()  # Hide the Tkinter root window
     if is_folder:
         filename = filedialog.askdirectory()
         action = "Directory selected: "
     else:
         filename = filedialog.askopenfilename()
         action = "File selected: "
-    entry.delete(0, tk.END)
-    if filename:  # Ensure a path was selected
-        entry.insert(0, filename)
-        append_to_console(action + filename)
+    return {'path': filename, 'action': action} if filename else None
 
-def auto_toggle(entry):
+@eel.expose
+def auto_toggle():
     """Toggle the entry field for automatic game location detection and log to console."""
     game_path = find_game_directory()
-    if entry.get().lower() == game_path:
-        entry.delete(0, tk.END)
-        append_to_console("Auto detection disabled.")
-    else:
-        entry.delete(0, tk.END)
-        entry.insert(0, game_path)
-        append_to_console("Auto detection enabled.")
+    message = "Auto detection enabled with path: " + game_path
+    return {'message': message, 'gamePath': game_path}
 
 
 
@@ -477,69 +386,4 @@ def auto_toggle(entry):
 
 # App Setup
 
-app = tk.Tk()
-app.geometry("680x420")
-app.resizable(width=False, height=False)
-app.title("DDLC Mod Installer")
-newdir_var = tk.StringVar(value="False")
-
-
-# Mod Zip Location
-zip_label = tk.Label(app, text="Zip File:")
-zip_label.grid(row=0, column=0, pady=(LEFT_PADDING, 0))
-zip_entry = tk.Entry(app, width=50)
-zip_entry.grid(row=0, column=1, pady=(LEFT_PADDING, 0))
-zip_browse = tk.Button(app, text="Browse", command=lambda: browse_path(zip_entry, is_folder=False))
-zip_browse.grid(row=0, column=2, pady=(LEFT_PADDING, 0))
-
-# Game Path
-game_path_label = tk.Label(app, text="Game Directory:")
-game_path_label.grid(row=1, column=0)
-game_path_entry = tk.Entry(app, width=50)
-game_path_entry.grid(row=1, column=1)
-game_path_browse = tk.Button(
-    app,
-    text="Browse",
-    command=lambda: browse_path(
-        game_path_entry, is_folder=True))
-game_path_browse.grid(row=1, column=2)
-auto_button = tk.Button(app, text="Auto", command=lambda: auto_toggle(game_path_entry))
-auto_button.grid(row=1, column=3, pady=(LEFT_PADDING, 0))
-
-mod_path_label = tk.Label(app, text="Mod Path:")
-mod_path_entry = tk.Entry(app, width=50)
-mod_path_browse = tk.Button(
-    app,
-    text="Browse",
-    command=lambda: browse_path(mod_path_entry, is_folder=True))
-newdir_checkbox = ttk.Checkbutton(app,
-                text='Install Mod to Separate Directory',
-                variable=newdir_var,
-                onvalue='True',
-                offvalue='False',
-                command=lambda: check_changed(newdir_var.get(), mod_path_entry))
-newdir_checkbox.grid(row=2, column=1, pady=(LEFT_PADDING, 0))
-
-process_button = tk.Button(
-    app,
-    text="Install Mod",
-    command=on_button_click)
-process_button.grid(row=4, column=0, columnspan=3, pady=(LEFT_PADDING, 0))
-
-delete_button = tk.Button(app, text="Delete DDLC", command=delete_ddlc)
-delete_button.grid(row=4, column=3, pady=(LEFT_PADDING, 0))
-
-console_label = tk.Label(app, text="Console Output:")
-console_label.grid(row=5, column=0, columnspan=3,padx=(LEFT_PADDING, 0))
-console = scrolledtext.ScrolledText(app, height=10, width=70, state=tk.DISABLED)
-console.grid(row=6, column=0, columnspan=3,padx=(LEFT_PADDING, 0))
-
-reminder_label = tk.Label(
-    app, text="Remember to install on a fresh copy of Doki Doki Literature Club!"
-    )
-reminder_label.grid(row=8, column=0, columnspan=3)
-
-progress_bar = ttk.Progressbar(app, orient=tk.HORIZONTAL, length=400, mode='determinate')
-
-append_to_console("Select a ZIP file to Install")
-app.mainloop()
+eel.start('index.html', size=(800, 700))
