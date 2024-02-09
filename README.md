@@ -1,6 +1,10 @@
 ---
+<div align=center>
 
 # DDMI (Doki Doki Mod Installer)
+
+![GitHub all releases](https://img.shields.io/github/downloads/ForgedCore8/doki-doki-mod-installer/total) ![GitHub](https://img.shields.io/github/license/ForgedCore8/doki-doki-mod-installer)
+</div>
 
 DDMI is a tool designed to streamline the installation of mods for "Doki Doki Literature Club!" (DDLC). It simplifies the process, making it accessible to those who may not be familiar with the manual installation process. By automating the detection of the game directory and the extraction and placement of mod files, DDMI ensures that mods are installed correctly and efficiently.
 
