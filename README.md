@@ -50,7 +50,7 @@ To Compile your own copy of DDMI, you can run the following commands:
 
 ```pip install nuitka```
 
-```nuitka --onefile --windows-disable-console --assume-yes-for-downloads --plugin-enable=tk-inter --include-package=tkinter --include-package-data=tkinter --exe ddmi.py```
+```nuitka --enable-plugin=pyside6 --follow-imports --windows-disable-console --include-data-dir=./assets=./assets ddmi.py```
 
 
 ## Contributing
