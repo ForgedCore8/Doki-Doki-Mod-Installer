@@ -146,28 +146,10 @@ class MainWindow(QMainWindow):
         self.zip_browse_button.clicked.connect(lambda: self.browse_path(self.zip_entry, False))
         self.game_path_browse_button.clicked.connect(lambda: self.browse_path(self.game_path_entry, True))
         self.auto_button.clicked.connect(lambda: self.auto_toggle())
-        self.newdir_checkbox.stateChanged.connect(slot=lambda state: utils.check_changed(state, self))
+        self.newdir_checkbox.stateChanged.connect(lambda state: utils.check_changed(state, self))
         self.mod_path_browse_button.clicked.connect(lambda: self.browse_path(self.mod_path_entry, True))
-        self.process_button.clicked.connect(slot=lambda: self.on_button_click())
-        self.delete_button.clicked.connect(slot=lambda: utils.delete_ddlc(self.game_path_entry.text(), self))
-
-    def start_installation_process(self):
-        # Read paths from the UI
-        zip_path = self.zip_entry.text()
-        game_path = self.game_path_entry.text()
-        separate_mod_path = self.mod_path_entry.text()  # Assume some logic to determine if this should be used
-
-        # Check if paths are provided
-        if not zip_path or not game_path:
-            QMessageBox.warning(self, "Error", "Please specify both the ZIP file and the game directory.")
-            return
-        if self.newdir_checkbox.isChecked() and not separate_mod_path:  # Assuming you have logic to decide if this is required
-            QMessageBox.warning(self, "Error", "Please specify the mod directory.")
-            return
-
-        # Create and start the InstallThread
-        install_thread = InstallThread(zip_path, game_path, separate_mod_path, self)
-        install_thread.start()
+        self.process_button.clicked.connect(lambda: self.on_button_click())
+        self.delete_button.clicked.connect(lambda: utils.delete_ddlc(self.game_path_entry.text(), self))
 
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)

@@ -4,7 +4,6 @@ import zipfile
 import shutil
 import winreg
 import subprocess
-import threading
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QThread, QObject, Signal, Qt
 from signal_manager import signal_manager
