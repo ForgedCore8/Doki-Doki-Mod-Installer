@@ -1,6 +1,7 @@
 #ifndef SIGNALMANAGER_H
 #define SIGNALMANAGER_H
 
+// qt.
 #include <QObject>
 
 class SignalManager : public QObject
@@ -16,5 +17,7 @@ signals:
     void criticalMessagebox(const QString &title, const QString &message);
     void infoMessagebox(const QString &title, const QString &message);
 };
+
+extern SignalManager signal_manager;
 
 #endif // SIGNALMANAGER_H
