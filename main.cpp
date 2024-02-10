@@ -15,12 +15,24 @@
 #include <QApplication>
 #include <QPainter>
 
+DimmingOverlay::DimmingOverlay(QWidget* parent)
+    : QWidget(parent), overlayColor(0, 0, 0, 180) // Semi-transparent black
+{
+    setAttribute(Qt::WA_TransparentForMouseEvents); 
+}
+
+void DimmingOverlay::paintEvent(QPaintEvent* /* event */) {
+    QPainter painter(this);
+    painter.fillRect(rect(), overlayColor);
+}
+
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     initUI();
     connect(signalManager, &SignalManager::consoleUpdate, this, &MainWindow::appendToConsole);
     connect(signalManager, &SignalManager::progressUpdate, this, &MainWindow::updateProgressBar);
     connect(signalManager, &SignalManager::criticalMessagebox, this, &MainWindow::criticalMessageBox);
     connect(signalManager, &SignalManager::infoMessagebox, this, &MainWindow::infoMessageBox);
+
 }
 
 MainWindow::~MainWindow() {}
@@ -29,13 +41,15 @@ void MainWindow::initUI() {
     this->setWindowTitle("DDLC Mod Installer");
     this->resize(1200, 600);
 
+    QWidget* centralWidget = new QWidget(this); // Assuming centralWidget is being set up here
+    this->setCentralWidget(centralWidget);
+
+    overlay = new DimmingOverlay(centralWidget);
+    overlay->setGeometry(centralWidget->rect()); // Cover the entire central widget
+
     // Setup shortcut for reloading background
     QShortcut* reloadShortcut = new QShortcut(QKeySequence("Ctrl+R"), this);
     QObject::connect(reloadShortcut, &QShortcut::activated, this, &MainWindow::loadRandomBackground);
-
-    // Setup central widget and layout
-    QWidget* centralWidget = new QWidget(this);
-    QVBoxLayout* layout = new QVBoxLayout(centralWidget);
 
     // Setup for Zip File selection
     QHBoxLayout* zipLayout = new QHBoxLayout();
