@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QPainter, QPalette, QBrush, QColor, QTextCursor, QShortcut, QKeySequence
 import utils
+import pathlib
 from utils import InstallThread
 from signal_manager import signal_manager
 
@@ -195,17 +196,17 @@ class MainWindow(QMainWindow):
         QApplication.restoreOverrideCursor()
         utils.enable_ui_elements(self)
 
-
     def loadRandomBackground(self):
-        backgrounds_dir = './assets/backgrounds'
-        background_images = [file for file in os.listdir(backgrounds_dir) if file.endswith(('.png', '.jpg', '.jpeg'))]
-        random_image = random.choice(background_images) if background_images else None
-        random_image_path = os.path.join(backgrounds_dir, random_image) if random_image else None
-
-        if random_image_path:
-            self.backgroundPixmap = QPixmap(random_image_path)
-            self.update()  # Trigger a repaint to show the new background
-        else:
+        try:
+            plib = pathlib.Path(__file__).parent / "assets" / "backgrounds"
+            background_images = [file for file in plib.iterdir() if file.suffix in (".png", ".jpg", ".jpeg")]
+            random_image_path = random.choice(background_images) if background_images else None
+            if random_image_path:
+                self.backgroundPixmap = QPixmap(random_image_path)
+                self.update()  # Trigger a repaint to show the new background
+            else:
+                print("No image found or the 'backgrounds' directory is missing.")
+        except Exception:
             print("No image found or the 'backgrounds' directory is missing.")
 
     def paintEvent(self, event):
@@ -255,7 +256,6 @@ class MainWindow(QMainWindow):
             self.game_path_entry.setText(game_path)
             self.append_to_console("Auto detection enabled.")
 
-    
     def critical_messagebox(self, title, message):
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Critical)
@@ -312,52 +312,63 @@ class MainWindow(QMainWindow):
 
     def apply_styles(self):
         """Applies styles to application"""
-        self.setStyleSheet("""
-            QWidget {
+        # unchecked = (pathlib.Path(__file__).parent / "assets" / "ui" / "unchecked.svg").resolve()
+        # checked = (pathlib.Path(__file__).parent / "assets" / "ui" / "checked.svg").resolve()
+        base64_svg_checked = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDggNTEyIj48IS0tIUZvbnQgQXdlc29tZSBGcmVlIDYuNS4xIGJ5IEBmb250YXdlc29tZSAtIGh0dHBzOi8vZm9udGF3ZXNvbWUuY29tIExpY2Vuc2UgLSBodHRwczovL2ZvbnRhd2Vzb21lLmNvbS9saWNlbnNlL2ZyZWUgQ29weXJpZ2h0IDIwMjQgRm9udGljb25zLCBJbmMuLS0+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTY0IDMyQzI4LjcgMzIgMCA2MC43IDAgOTZWNDE2YzAgMzUuMyAyOC43IDY0IDY0IDY0SDM4NGMzNS4zIDAgNjQtMjguNyA2NC02NFY5NmMwLTM1LjMtMjguNy02NC02NC02NEg2NHpNMzM3IDIwOUwyMDkgMzM3Yy05LjQgOS40LTI0LjYgOS40LTMzLjkgMGwtNjQtNjRjLTkuNC05LjQtOS40LTI0LjYgMC0zMy45czI0LjYtOS40IDMzLjkgMGw0NyA0N0wzMDMgMTc1YzkuNC05LjQgMjQuNi05LjQgMzMuOSAwczkuNCAyNC42IDAgMzMuOXoiLz48L3N2Zz4='  # Your base64-encoded SVG string for the checked state
+        base64_svg_unchecked = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDggNTEyIj48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNMzg0IDgwYzguOCAwIDE2IDcuMiAxNiAxNlY0MTZjMCA4LjgtNy4yIDE2LTE2IDE2SDY0Yy04LjggMC0xNi03LjItMTYtMTZWOTZjMC04LjggNy4yLTE2IDE2LTE2SDM4NHpNNjQgMzJDMjguNyAzMiAwIDYwLjcgMCA5NlY0MTZjMCAzNS4zIDI4LjcgNjQgNjQgNjRIMzg0YzM1LjMgMCA2NC0yOC43IDY0LTY0Vjk2YzAtMzUuMy0yOC43LTY0LTY0LTY0SDY0eiIvPjwvc3ZnPg=='
+        stylesheet = f"""
+            QWidget {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 color: #fff;
-            }
-            QLabel, QPush_button, QCheckBox {
+            }}
+            QLabel, QPush_button, QCheckBox {{
                 margin: 10px;
-            }
-            QLineEdit, QTextEdit {
+            }}
+            QLineEdit, QTextEdit {{
                 background-color: rgba(30,30,30,220);
                 color: #fff;
                 border-radius: 5px;
                 padding: 10px;
                 border: 1px solid #777;
-            }
-            QPushButton {
+            }}
+            QPushButton {{
                 background-color: #007bff;
                 color: white;
                 border-radius: 5px;
                 padding: 10px 15px;
                 border: none;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: #0056b3;
-            }
-            QProgressBar {
+            }}
+            QProgressBar {{
                 border: 2px solid #2196F3;
                 border-radius: 5px;
                 text-align: center;
-            }
-            QProgressBar::chunk {
+            }}
+            QProgressBar::chunk {{
                 background-color: #2196F3;
                 width: 20px; /* Used to demonstrate chunk effect */
-            }
-            QCheckBox::indicator {
+            }}
+            QCheckBox::indicator {{
                 width: 25px;
                 height: 25px;
-            }
-            QCheckBox::indicator:checked {
-                image: url(./assets/ui/checked.svg); /* You need to provide this */
-            }
-            QCheckBox::indicator:unchecked {
-                image: url(./assets/ui/unchecked.svg); /* You need to provide this */
-            }
-        """)
-        
+            }}
+            QCheckBox::indicator:checked {{
+                image: url(./assets/ui/checked.svg);
+            }}
+            QCheckBox::indicator:unchecked {{
+                image: url(./assets/ui/unchecked.svg);
+            }}
+        """
+        #QCheckBox::indicator:checked {{
+        #        image: url(data:image/svg+xml;base64,{base64_svg_checked});
+        #    }}
+        #    QCheckBox::indicator:unchecked {{
+        #        image: url(data:image/svg+xml;base64,{base64_svg_unchecked});
+        #    }}
+        self.setStyleSheet(stylesheet)
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
