@@ -40,16 +40,13 @@ private slots:
     void loadRandomBackground();
     void updateProgressBar(float value);
     void appendToConsole(const QString& message);
-    void onButtonInstallModClick();
-    void onButtonDeleteDDLCClick();
-    void browsePath(bool isFolder);
-    void autoDetectGamePath();
+    void onButtonClick();
+    void browsePath(QLineEdit* entry, bool isFolder);
     void criticalMessageBox(const QString& title, const QString& message);
     void infoMessageBox(const QString& title, const QString& message);
 
 private:
     void initUI();
-    void connectSignals();
     void applyStyles();
 
     // UI Components
