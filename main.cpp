@@ -1,182 +1,142 @@
-#include "MainWindow.h"
-#include "DimmingOverlay.h"
+// qt.
+#include <QApplication>
+#include <QWidget>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QLabel>
+#include <QMainWindow>
 #include <QLineEdit>
+#include <QFrame>
 #include <QPushButton>
 #include <QCheckBox>
 #include <QTextEdit>
 #include <QProgressBar>
+#include <QHBoxLayout>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QShortcut>
-#include <QKeySequence>
-#include <QApplication>
-#include <QPainter>
+#include <QRandomGenerator>
 
-DimmingOverlay::DimmingOverlay(QWidget* parent)
+// ddmi.
+#include "dimming_overlay.h"
+#include "install_thread.h"
+#include "mainwindow.h"
+#include "signal_manager.h"
+#include "utils.h"
+
+SignalManager signal_manager;
+
+DimmingOverlay::DimmingOverlay(QWidget *parent)
     : QWidget(parent), overlayColor(0, 0, 0, 180) // Semi-transparent black
 {
-    setAttribute(Qt::WA_TransparentForMouseEvents); 
+    setAttribute(Qt::WA_TransparentForMouseEvents);
 }
 
-void DimmingOverlay::paintEvent(QPaintEvent* /* event */) {
+void DimmingOverlay::paintEvent(QPaintEvent * /* event */) {
     QPainter painter(this);
     painter.fillRect(rect(), overlayColor);
 }
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     initUI();
-    connect(signalManager, &SignalManager::consoleUpdate, this, &MainWindow::appendToConsole);
-    connect(signalManager, &SignalManager::progressUpdate, this, &MainWindow::updateProgressBar);
-    connect(signalManager, &SignalManager::criticalMessagebox, this, &MainWindow::criticalMessageBox);
-    connect(signalManager, &SignalManager::infoMessagebox, this, &MainWindow::infoMessageBox);
-
+    connect(&signal_manager, &SignalManager::consoleUpdate, this, &MainWindow::appendToConsole);
+    connect(&signal_manager, &SignalManager::progressUpdate, this, &MainWindow::updateProgressBar);
+    connect(&signal_manager, &SignalManager::criticalMessagebox, this, &MainWindow::criticalMessageBox);
+    connect(&signal_manager, &SignalManager::infoMessagebox, this, &MainWindow::infoMessageBox);
 }
-
-MainWindow::~MainWindow() {}
 
 void MainWindow::initUI() {
     this->setWindowTitle("DDLC Mod Installer");
     this->resize(1200, 600);
 
-    QWidget* centralWidget = new QWidget(this); // Assuming centralWidget is being set up here
-    this->setCentralWidget(centralWidget);
-
-    overlay = new DimmingOverlay(centralWidget);
-    overlay->setGeometry(centralWidget->rect()); // Cover the entire central widget
-
     // Setup shortcut for reloading background
-    QShortcut* reloadShortcut = new QShortcut(QKeySequence("Ctrl+R"), this);
-    QObject::connect(reloadShortcut, &QShortcut::activated, this, &MainWindow::loadRandomBackground);
+    QShortcut* reload_shortcut = new QShortcut(QKeySequence("Ctrl+R"), this);
+    QObject::connect(reload_shortcut, &QShortcut::activated, this, &MainWindow::loadRandomBackground);
+
+    // Setup central widget and layout
+    QWidget *central_widget = new QWidget(this);
+    QVBoxLayout *layout = new QVBoxLayout(central_widget);
+
+    overlay = new DimmingOverlay(central_widget);
+    overlay->setGeometry(central_widget->rect()); // Cover the entire central widget
 
     // Setup for Zip File selection
-    QHBoxLayout* zipLayout = new QHBoxLayout();
-    QLabel* zipLabel = new QLabel("Zip File:");
-    QLineEdit* zipEntry = new QLineEdit();
-    QPushButton* zipBrowseButton = new QPushButton("Browse");
-    zipLayout->addWidget(zipLabel);
-    zipLayout->addWidget(zipEntry);
-    zipLayout->addWidget(zipBrowseButton);
-    layout->addLayout(zipLayout);
+    QHBoxLayout *zip_layout = new QHBoxLayout();
+    QLabel* zip_Label = new QLabel("Zip File:");
+    QLineEdit* zip_entry = new QLineEdit();
+    QPushButton* zip_browse_button = new QPushButton("Browse");
+    zip_layout->addWidget(zip_Label);
+    zip_layout->addWidget(zip_entry);
+    zip_layout->addWidget(zip_browse_button);
+    layout->addLayout(zip_layout);
 
     // Setup for Game Directory selection
-    QHBoxLayout* gamePathLayout = new QHBoxLayout();
-    QLabel* gamePathLabel = new QLabel("Game Directory:");
-    QLineEdit* gamePathEntry = new QLineEdit();
+    QHBoxLayout* game_path_layout = new QHBoxLayout();
+    QLabel* game_path_label = new QLabel("Game Directory:");
+    QLineEdit* game_path_entry = new QLineEdit();
     QPushButton* gamePathBrowseButton = new QPushButton("Browse");
-    QPushButton* autoButton = new QPushButton("Auto");
-    gamePathLayout->addWidget(gamePathLabel);
-    gamePathLayout->addWidget(gamePathEntry);
-    gamePathLayout->addWidget(gamePathBrowseButton);
-    gamePathLayout->addWidget(autoButton);
-    layout->addLayout(gamePathLayout);
+    QPushButton* auto_button = new QPushButton("Auto");
+    game_path_layout->addWidget( game_path_label);
+    game_path_layout->addWidget(game_path_entry);
+    game_path_layout->addWidget(gamePathBrowseButton);
+    game_path_layout->addWidget(auto_button);
+    layout->addLayout(game_path_layout);
 
     // Setup for Install Mod to Separate Directory checkbox
-    QCheckBox* newDirCheckbox = new QCheckBox("Install Mod to Separate Directory");
-    layout->addWidget(newDirCheckbox);
+    QCheckBox* new_dir_checkbox = new QCheckBox("Install Mod to Separate Directory");
+    layout->addWidget(new_dir_checkbox);
 
     // Setup for Mod Path (Initially Hidden)
-    QHBoxLayout* modPathLayout = new QHBoxLayout();
-    QLabel* modPathLabel = new QLabel("Mod Path:");
-    QLineEdit* modPathEntry = new QLineEdit();
-    QPushButton* modPathBrowseButton = new QPushButton("Browse");
-    modPathLayout->addWidget(modPathLabel);
-    modPathLayout->addWidget(modPathEntry);
-    modPathLayout->addWidget(modPathBrowseButton);
-    layout->addLayout(modPathLayout);
-    modPathLabel->setVisible(false);
+    QHBoxLayout *mod_path_layout = new QHBoxLayout();
+    QLabel *mod_path_label = new QLabel("Mod Path:");
+    QLineEdit *modPathEntry = new QLineEdit();
+    QPushButton *modPathBrowseButton = new QPushButton("Browse");
+    mod_path_layout->addWidget(mod_path_label);
+    mod_path_layout->addWidget(modPathEntry);
+    mod_path_layout->addWidget(modPathBrowseButton);
+    layout->addLayout(mod_path_layout);
+    mod_path_label->setVisible(false);
     modPathEntry->setVisible(false);
     modPathBrowseButton->setVisible(false);
 
     // Setup for Install and Delete buttons
-    QPushButton* installButton = new QPushButton("Install Mod");
-    QPushButton* deleteButton = new QPushButton("Delete DDLC");
+    QPushButton *installButton = new QPushButton("Install Mod");
+    QPushButton *deleteButton = new QPushButton("Delete DDLC");
     layout->addWidget(installButton);
     layout->addWidget(deleteButton);
 
     // Setup for Console Output
-    QLabel* consoleLabel = new QLabel("Console Output:");
-    QTextEdit* consoleOutput = new QTextEdit();
+    QLabel *consoleLabel = new QLabel("Console Output:");
+    QTextEdit *consoleOutput = new QTextEdit();
     consoleOutput->setReadOnly(true);
     layout->addWidget(consoleLabel);
     layout->addWidget(consoleOutput);
 
     // Setup for Progress Bar (Initially Hidden)
-    QProgressBar* progressBar = new QProgressBar();
+    QProgressBar *progressBar = new QProgressBar();
     progressBar->setVisible(false);
     layout->addWidget(progressBar);
 
     // Finalize setting the central widget
-    this->setCentralWidget(centralWidget);
+    this->setCentralWidget(central_widget);
     applyStyles();
 
-    connect(zipBrowseButton, &QPushButton::clicked, this, [this]() { this->browsePath(zipEntry, false); });
-    connect(gamePathBrowseButton, &QPushButton::clicked, this, [this]() { this->browsePath(gamePathEntry, true); });
-    connect(autoButton, &QPushButton::clicked, this, &MainWindow::autoToggle);
-    connect(newDirCheckbox, &QCheckBox::stateChanged, this, [this](int state) { utils::checkChanged(state, this); });
-    connect(modPathBrowseButton, &QPushButton::clicked, this, [this]() { this->browsePath(modPathEntry, true); });
-    connect(processButton, &QPushButton::clicked, this, &MainWindow::onButtonClick);
-    connect(deleteButton, &QPushButton::clicked, this, [this]() { utils::deleteDDLC(gamePathEntry->text(), this); });
-}
-
-void MainWindow::updateProgressBar(float value) {
-    progressBar->setValue(value);
-    QApplication::processEvents();
-}
-
-void MainWindow::appendToConsole(const QString& message) {
-    consoleOutput->setReadOnly(false);
-    consoleOutput->append(message);
-    // Ensure the cursor is at the end and the view scrolls to the bottom
-    QTextCursor cursor = consoleOutput->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    consoleOutput->setTextCursor(cursor);
-    consoleOutput->setReadOnly(true);
-    QApplication::processEvents();
-}
-
-void MainWindow::onButtonClick() {
-    qDebug() << "Button clicked";
-    // Gather input data from UI elements
-    QString zipPath = zipEntry->text();
-    QString gamePath = gamePathEntry->text();
-    QString modPath = newDirCheckbox->isChecked() ? modPathEntry->text() : QString();
-
-    // Perform input validation
-    if (zipPath.isEmpty() || gamePath.isEmpty()) {
-        QMessageBox::critical(this, "Error", "Please specify both the ZIP file and the game directory.");
-        return;
-    }
-
-    if (newDirCheckbox->isChecked() && modPath.isEmpty()) {
-        QMessageBox::critical(this, "Error", "Please specify the mod directory.");
-        return;
-    }
-
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    utils::showProgressBar(this); 
-    utils::disableUIElements(this); 
-
-    // Initialize and start the installation thread
-    installThread = new InstallThread(zipPath, gamePath, modPath, this);
-    connect(installThread, &InstallThread::finished, this, &MainWindow::threadFinished);
-    installThread->start();
-}
-
-void MainWindow::threadFinished() {
-    QApplication::restoreOverrideCursor();
-    utils::enableUIElements(this);
+    connect(zip_browse_button, &QPushButton::clicked, this, [this, &zip_entry]() { this->browsePath(zip_entry, false); });
+    connect(gamePathBrowseButton, &QPushButton::clicked, this, [this, &game_path_entry]() { this->browsePath(game_path_entry, true); });
+    connect(auto_button, &QPushButton::clicked, this, &MainWindow::autoToggle);
+    connect(new_dir_checkbox, &QCheckBox::stateChanged, this, [this](int state) { utils::checkChanged(state, this); });
+    connect(modPathBrowseButton, &QPushButton::clicked, this, [this]() { this->browsePath(mod_path_entry, true); });
+    connect(process_button, &QPushButton::clicked, this, &MainWindow::onButtonClick);
+    connect(deleteButton, &QPushButton::clicked, this, [this, &game_path_entry]() { utils::deleteDDLC(game_path_entry->text(), this); });
 }
 
 void MainWindow::loadRandomBackground() {
     QDir directory(":/assets/backgrounds");
-    QStringList images = directory.entryList(QStringList() << "*.png" << "*.jpg" << "*.jpeg", QDir::Files);
+    QStringList images = directory.entryList(QStringList() << "*.png" << "*.jpg" << "*.jpeg",
+    QDir::Files);
+
     if (!images.isEmpty()) {
         int index = QRandomGenerator::global()->bounded(images.size());
         QString imagePath = directory.filePath(images.at(index));
-        backgroundPixmap.load(imagePath);
+        background_pixmap.load(imagePath);
         update(); // Trigger a repaint to show the new background
     }
     else {
@@ -184,118 +144,47 @@ void MainWindow::loadRandomBackground() {
     }
 }
 
-void MainWindow::paintEvent(QPaintEvent* event) {
-    QMainWindow::paintEvent(event); // Call base class paint event
-    if (!backgroundPixmap.isNull()) {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-
-        // Calculate the scaled pixmap size while maintaining aspect ratio
-        QPixmap scaledPixmap = backgroundPixmap.scaled(this->size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-
-        // Calculate top-left coordinates to center the pixmap in the window
-        int startX = (this->width() - scaledPixmap.width()) / 2;
-        int startY = (this->height() - scaledPixmap.height()) / 2;
-
-        // Draw the pixmap at the calculated position
-        painter.drawPixmap(startX, startY, scaledPixmap);
-    }
+void MainWindow::appendToConsole(const QString &message) {
+    console_output->setReadOnly(false);
+    console_output->append(message);
+    // Ensure the cursor is at the end and the view scrolls to the bottom
+    QTextCursor cursor = console_output->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    console_output->setTextCursor(cursor);
+    console_output->setReadOnly(true);
+    QApplication::processEvents();
 }
 
-void MainWindow::resizeEvent(QResizeEvent* event) {
-    if (overlay) {
-        overlay->resize(event->size());
+void MainWindow::onButtonClick() {
+    qDebug() << "Button clicked";
+    // Gather input data from UI elements
+    QString zipPath = zip_entry->text();
+    QString gamePath = game_path_entry->text();
+    QString modPath = new_dir_check_box->isChecked() ? mod_path_entry->text() : QString();
+
+    // Perform input validation
+    if (zipPath.isEmpty() || gamePath.isEmpty()) {
+        criticalMessageBox("Error", "Please specify both the ZIP file and the game directory.");
+        return;
     }
-    // Adjust additional UI elements as necessary
-    QMainWindow::resizeEvent(event); // Ensure base class resize event is called
+
+    if (new_dir_check_box->isChecked() && modPath.isEmpty()) {
+        criticalMessageBox("Error", "Please specify the mod directory.");
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    utils::showProgressBar(this);
+    utils::disableUiElements(this);
+
+    // Initialize and start the installation thread
+    InstallThread* install_thread = new InstallThread(zipPath, gamePath, modPath, this);
+    connect(install_thread, &InstallThread::finished, this, &MainWindow::threadFinished);
+    install_thread->start();
 }
 
-void MainWindow::browsePath(QLineEdit* entry, bool isFolder) {
-    QString filename;
-    if (isFolder) {
-        filename = QFileDialog::getExistingDirectory(this, tr("Select Directory"));
-    }
-    else {
-        filename = QFileDialog::getOpenFileName(this, tr("Select File")).first;
-    }
-
-    if (!filename.isEmpty()) {
-        entry->setText(filename);
-        appendToConsole(isFolder ? "Directory selected: " + filename : "File selected: " + filename);
-    }
-}
-
-void MainWindow::autoToggle() {
-    QString gamePath = utils::findGameDirectory(); // Ensure this function is implemented in C++
-    QString currentPath = gamePathEntry->text();
-
-    if (currentPath.compare(gamePath, Qt::CaseInsensitive) == 0) {
-        gamePathEntry->clear();
-        appendToConsole("Auto detection disabled.");
-    }
-    else {
-        gamePathEntry->setText(gamePath);
-        appendToConsole("Auto detection enabled.");
-    }
-}
-
-void MainWindow::criticalMessageBox(const QString& title, const QString& message) {
-    QMessageBox msgBox(this);
-    msgBox.setIcon(QMessageBox::Critical);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(message);
-    msgBox.setStyleSheet(R"(
-        QMessageBox {
-            background-color: #2b2b2b;
-        }
-        QLabel {
-            color: #ffffff;
-        }
-        QPushButton {
-            background-color: #4b4b4b;
-            color: #ffffff;
-            border-radius: 4px;
-            padding: 5px;
-        }
-        QPushButton:hover {
-            background-color: #5b5b5b;
-        }
-        QPushButton:pressed {
-            background-color: #2b2b2b;
-        }
-    )");
-    msgBox.exec();
-}
-
-void MainWindow::infoMessageBox(const QString& title, const QString& message) {
-    QMessageBox msgBox(this);
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(message);
-    msgBox.setStyleSheet(R"(
-        QMessageBox {
-            background-color: #2b2b2b;
-        }
-        QLabel {
-            color: #ffffff;
-        }
-        QPushButton {
-            background-color: #4b4b4b;
-            color: #ffffff;
-            border-radius: 4px;
-            padding: 5px;
-        }
-        QPushButton:hover {
-            background-color: #5b5b5b;
-        }
-        QPushButton:pressed {
-            background-color: #2b2b2b;
-        }
-    )");
-    msgBox.exec();
-}
-
-void MainWindow::applyStyles() {
+void MainWindow::applyStyles()
+{
     QString stylesheet = R"(
         QWidget {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -343,4 +232,106 @@ void MainWindow::applyStyles() {
     )";
 
     this->setStyleSheet(stylesheet);
+}
+
+void MainWindow::updateProgressBar(float value) {
+    progress_bar->setValue(value);
+    QApplication::processEvents();
+}
+
+void MainWindow::browsePath(QLineEdit *entry, bool is_folder) {
+    QString filename;
+
+    if (is_folder) { filename = QFileDialog::getExistingDirectory(this, tr("Select Directory")); }
+    else { filename = QFileDialog::getOpenFileName(this, tr("Select File")); }
+
+    if (!filename.isEmpty()) {
+        entry->setText(filename);
+        appendToConsole(is_folder ? "Directory selected: " + filename : "File selected: " + filename);
+    }
+}
+
+void MainWindow::autoToggle() {
+
+    QString game_path = utils::findGameDirectory(); 
+    QString currentPath = game_path_entry->text();
+
+    if (currentPath.compare(game_path, Qt::CaseInsensitive) == 0) {
+        game_path_entry->clear();
+        appendToConsole("Auto detection disabled.");
+    }
+    else {
+        game_path_entry->setText(game_path);
+        appendToConsole("Auto detection enabled.");
+    }
+}
+
+void MainWindow::threadFinished() {
+    QApplication::restoreOverrideCursor();
+    utils::enableUiElements(this);
+}
+
+void MainWindow::infoMessageBox(const QString &title, const QString &message) {
+    QMessageBox msgBox(this);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setWindowTitle(title);
+    msgBox.setText(message);
+    msgBox.setStyleSheet(R"(
+        QMessageBox {
+            background-color: #2b2b2b;
+        }
+        QLabel {
+            color: #ffffff;
+        }
+        QPushButton {
+            background-color: #4b4b4b;
+            color: #ffffff;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        QPushButton:hover {
+            background-color: #5b5b5b;
+        }
+        QPushButton:pressed {
+            background-color: #2b2b2b;
+        }
+    )");
+    msgBox.exec();
+}
+
+void MainWindow::criticalMessageBox(const QString& title, const QString& message) {
+    QMessageBox msgBox(this);
+    msgBox.setIcon(QMessageBox::Critical);
+    msgBox.setWindowTitle(title);
+    msgBox.setText(message);
+    msgBox.setStyleSheet(R"(
+        QMessageBox {
+            background-color: #2b2b2b;
+        }
+        QLabel {
+            color: #ffffff;
+        }
+        QPushButton {
+            background-color: #4b4b4b;
+            color: #ffffff;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        QPushButton:hover {
+            background-color: #5b5b5b;
+        }
+        QPushButton:pressed {
+            background-color: #2b2b2b;
+        }
+    )");
+    msgBox.exec();
+}
+
+int main(int argc, char **argv) {
+    QApplication app(argc, argv);
+
+    MainWindow window;
+    window.show();
+
+    return app.exec();
 }

@@ -3,6 +3,10 @@
 
 # DDMI (Doki Doki Mod Installer)
 
+<img src="readme/ddmi.png"
+           alt="DDMI logo"
+             style="height: 300px; width: auto;" />
+
 ![GitHub all releases](https://img.shields.io/github/downloads/ForgedCore8/doki-doki-mod-installer/total) ![GitHub](https://img.shields.io/github/license/ForgedCore8/doki-doki-mod-installer)
 </div>
 
@@ -52,9 +56,7 @@ For additional help, please refer to the community forums or the mod's documenta
 ## Compiling
 To Compile your own copy of DDMI, you can run the following commands:
 
-```pip install nuitka```
-
-```nuitka --enable-plugin=pyside6 --follow-imports --windows-disable-console --include-data-dir=./assets=./assets ddmi.py```
+```Coming Soon!```
 
 
 ## Contributing
