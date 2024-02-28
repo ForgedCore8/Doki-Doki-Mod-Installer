@@ -7,6 +7,8 @@
            alt="DDMI logo"
              style="height: 300px; width: auto;" />
 
+[Join The Discord!](https://discord.gg/F5wnapMBRm)
+
 ![GitHub all releases](https://img.shields.io/github/downloads/ForgedCore8/doki-doki-mod-installer/total) ![GitHub](https://img.shields.io/github/license/ForgedCore8/doki-doki-mod-installer)
 </div>
 
