@@ -3,6 +3,8 @@
 
 # DDMI (Doki Doki Mod Installer)
 
+[Join the Discord!](https://discord.gg/c8XV2BuA)
+
 ![GitHub all releases](https://img.shields.io/github/downloads/ForgedCore8/doki-doki-mod-installer/total) ![GitHub](https://img.shields.io/github/license/ForgedCore8/doki-doki-mod-installer)
 </div>
 
